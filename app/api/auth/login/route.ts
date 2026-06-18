@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   const input = schema.safeParse(await request.json());
   if (!input.success) return NextResponse.json({ error: "Ungültige Anmeldung." }, { status: 400 });
 
-  const user = database.findUserByName(input.data.name);
+  const user = await database.findUserByName(input.data.name);
   if (!user || !(await compare(input.data.password, user.passwordHash))) {
     return NextResponse.json({ error: "Name oder Passwort stimmt nicht." }, { status: 401 });
   }

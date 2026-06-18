@@ -13,13 +13,13 @@ export async function POST(request: Request) {
   const input = schema.safeParse(await request.json());
   if (!input.success) return NextResponse.json({ error: "Ungültige Bonusantwort." }, { status: 400 });
 
-  const question = database.findQuestion(input.data.questionId);
+  const question = await database.findQuestion(input.data.questionId);
   if (!question) return NextResponse.json({ error: "Bonusfrage nicht gefunden." }, { status: 404 });
   if (new Date(question.closesAt) <= new Date()) {
     return NextResponse.json({ error: "Diese Bonusfrage ist geschlossen." }, { status: 409 });
   }
 
-  const pick = database.upsertBonusPick({ userId: user.id, questionId: question.id, answer: input.data.answer });
+  const pick = await database.upsertBonusPick({ userId: user.id, questionId: question.id, answer: input.data.answer });
 
   return NextResponse.json({ pick });
 }

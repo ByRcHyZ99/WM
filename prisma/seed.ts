@@ -6,7 +6,7 @@ const matches = [
     stage: "Gruppenphase",
     group: "A",
     homeTeam: "Mexiko",
-    awayTeam: "Südafrika",
+    awayTeam: "Suedafrika",
     kickoff: "2026-06-11T21:00:00.000Z",
     venue: "Mexico City",
     status: "FINAL" as const,
@@ -17,7 +17,7 @@ const matches = [
     number: 2,
     stage: "Gruppenphase",
     group: "A",
-    homeTeam: "Südkorea",
+    homeTeam: "Suedkorea",
     awayTeam: "Tschechien",
     kickoff: "2026-06-12T00:00:00.000Z",
     venue: "Zapopan",
@@ -54,7 +54,7 @@ const matches = [
     stage: "Gruppenphase",
     group: "A",
     homeTeam: "Tschechien",
-    awayTeam: "Südafrika",
+    awayTeam: "Suedafrika",
     kickoff: "2026-06-18T16:00:00.000Z",
     venue: "Atlanta"
   },
@@ -81,7 +81,7 @@ const matches = [
     stage: "Gruppenphase",
     group: "A",
     homeTeam: "Mexiko",
-    awayTeam: "Südkorea",
+    awayTeam: "Suedkorea",
     kickoff: "2026-06-19T03:00:00.000Z",
     venue: "Zapopan"
   },
@@ -105,20 +105,20 @@ const matches = [
   }
 ];
 
-function main() {
+async function main() {
   for (const match of matches) {
-    database.upsertMatchByNumber(match);
+    await database.upsertMatchByNumber(match);
   }
 
-  database.upsertQuestion({
+  await database.upsertQuestion({
     id: "top-scorer",
-    title: "Wer wird Top-Torschütze?",
+    title: "Wer wird Top-Torschuetze?",
     closesAt: "2026-06-24T16:00:00.000Z",
     points: 8,
     answer: null
   });
 
-  database.upsertQuestion({
+  await database.upsertQuestion({
     id: "world-champion",
     title: "Wer wird Weltmeister?",
     closesAt: "2026-06-28T16:00:00.000Z",
@@ -127,4 +127,7 @@ function main() {
   });
 }
 
-main();
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

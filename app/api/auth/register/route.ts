@@ -14,11 +14,11 @@ export async function POST(request: Request) {
   const input = schema.safeParse(await request.json());
   if (!input.success) return NextResponse.json({ error: "Bitte Name und Passwort prüfen." }, { status: 400 });
 
-  const userCount = database.userCount();
+  const userCount = await database.userCount();
   const isAdmin = userCount === 0 || (!!process.env.ADMIN_CODE && input.data.adminCode === process.env.ADMIN_CODE);
 
   try {
-    const user = database.createUser({ name: input.data.name, passwordHash: await hash(input.data.password, 12), isAdmin });
+    const user = await database.createUser({ name: input.data.name, passwordHash: await hash(input.data.password, 12), isAdmin });
     if (!user) throw new Error("User not created");
 
     await setSession(user.id);

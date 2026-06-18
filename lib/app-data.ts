@@ -2,11 +2,13 @@ import { database } from "@/lib/db";
 import { buildScoreboard } from "@/lib/scoring";
 
 export async function getAppData(userId?: string) {
-  const users = database.users();
-  const matches = database.matches();
-  const bets = database.bets();
-  const questions = database.questions();
-  const bonusPicks = database.bonusPicks();
+  const [users, matches, bets, questions, bonusPicks] = await Promise.all([
+    database.users(),
+    database.matches(),
+    database.bets(),
+    database.questions(),
+    database.bonusPicks()
+  ]);
 
   return {
     matches,

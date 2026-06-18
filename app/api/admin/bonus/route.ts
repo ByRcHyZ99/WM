@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     answer: input.data.answer || null
   };
 
-  const question = database.upsertQuestion({ id: input.data.id, ...data });
+  const question = await database.upsertQuestion({ id: input.data.id, ...data });
 
   return NextResponse.json({ question });
 }

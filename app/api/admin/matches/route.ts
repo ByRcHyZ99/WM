@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     venue: input.data.venue || null
   };
 
-  const match = database.upsertMatch({ id: input.data.id, ...data });
+  const match = await database.upsertMatch({ id: input.data.id, ...data });
 
   return NextResponse.json({ match });
 }

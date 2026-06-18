@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Für Live/Final brauchst du beide Tore." }, { status: 400 });
   }
 
-  const match = database.setResult({
+  const match = await database.setResult({
     matchId: input.data.matchId,
     status: input.data.status as MatchStatus,
     homeScore: input.data.status === "SCHEDULED" ? null : input.data.homeScore ?? null,

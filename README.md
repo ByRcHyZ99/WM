@@ -1,6 +1,6 @@
 # WM Tippspiel
 
-Eine kleine private Web-App für ein WM-Tippspiel mit Freunden.
+Eine kleine private Web-App für ein WM-Tippspiel mit Freunden. Die App nutzt PostgreSQL und läuft dadurch auch auf Render Free, wenn du eine externe Datenbank wie Neon verwendest.
 
 ## Funktionen
 
@@ -18,8 +18,9 @@ Eine kleine private Web-App für ein WM-Tippspiel mit Freunden.
 ## Lokal starten
 
 1. `.env.example` nach `.env` kopieren.
-2. In `.env` `APP_SECRET` und `ADMIN_CODE` ändern.
-3. Pakete installieren und Datenbank vorbereiten:
+2. In `.env` `DATABASE_URL` auf deinen Neon-Connection-String setzen.
+3. In `.env` `APP_SECRET` und `ADMIN_CODE` ändern.
+4. Pakete installieren und Datenbank vorbereiten:
 
 ```powershell
 npm.cmd install
@@ -37,7 +38,7 @@ Für aktuelle offizielle Daten nutze die FIFA-Spielplanseite:
 
 https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/scores-fixtures
 
-## Online hosten
+## Online hosten mit Render Free + Neon
 
 Die einfachste Variante für eine Freundesgruppe:
 
@@ -58,18 +59,12 @@ npm run start
 5. Environment Variables setzen:
 
 ```text
-DATABASE_URL=file:/data/dev.db
+DATABASE_URL=<dein Neon connection string mit sslmode=require>
 APP_SECRET=<langer-zufallswert>
 ADMIN_CODE=<dein-admin-code>
 ```
 
-6. Einen persistenten Disk bei Render mounten:
-
-```text
-Mount Path: /data
-```
-
-7. Nach dem ersten Deploy einmal in der Render Shell ausführen:
+6. Nach dem ersten Deploy einmal in der Render Shell ausführen:
 
 ```bash
 npm run db:seed
@@ -77,10 +72,19 @@ npm run db:seed
 
 Danach bekommen deine Freunde die Render-URL und können sich registrieren.
 
-## Alternative Hosting-Optionen
+## Neon verbinden
 
-- Railway oder Fly.io funktionieren ebenfalls gut, wenn du ein persistentes Volume für SQLite nutzt.
-- Für größere Gruppen wäre PostgreSQL besser; dafür müsste die Datenbank-Schicht in `lib/db.ts` auf einen Postgres-Client umgestellt werden.
+1. In Neon auf **Connection string** bleiben.
+2. **Show password** anklicken.
+3. Den kompletten String kopieren.
+4. In Render unter **Environment** als `DATABASE_URL` einfügen.
+5. Der String muss ungefähr so aussehen:
+
+```text
+postgresql://neondb_owner:PASSWORT@HOST.eu-central-1.aws.neon.tech/neondb?sslmode=require
+```
+
+Du brauchst bei Render keinen Disk und keinen Mount Path.
 
 ## Wichtige Hinweise
 

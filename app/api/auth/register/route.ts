@@ -1,6 +1,8 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
-import { hash } from "bcryptjs";
 import { z } from "zod";
+import { hash } from "bcryptjs";
 import { setSession } from "@/lib/auth";
 import { database } from "@/lib/db";
 

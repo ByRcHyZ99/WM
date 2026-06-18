@@ -2,22 +2,27 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import type { Bet, BonusPick, BonusQuestion, Match, MatchStatus, PublicUser, User } from "@/lib/types";
 
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-  throw new Error("DATABASE_URL is missing. Use your Neon PostgreSQL connection string.");
-}
-
 const globalForPg = globalThis as unknown as { pgPool?: Pool; pgReady?: Promise<void> };
+let _pool: Pool | undefined;
 
-const pool =
-  globalForPg.pgPool ??
-  new Pool({
+function getPool(): Pool {
+  if (_pool) return _pool;
+  if (globalForPg.pgPool) return (_pool = globalForPg.pgPool);
+
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is missing. Use your Neon PostgreSQL connection string.");
+  }
+
+  _pool = new Pool({
     connectionString,
     ssl: connectionString.includes("localhost") ? false : { rejectUnauthorized: false }
   });
 
-if (process.env.NODE_ENV !== "production") globalForPg.pgPool = pool;
+  if (process.env.NODE_ENV !== "production") globalForPg.pgPool = _pool;
+
+  return _pool;
+}
 
 function now() {
   return new Date().toISOString();
@@ -95,7 +100,7 @@ function pickRow(row: Record<string, unknown>): BonusPick {
 }
 
 async function migrate() {
-  await pool.query(`
+  await getPool().query(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL UNIQUE,
@@ -160,13 +165,13 @@ async function ready() {
 export const database = {
   async userCount() {
     await ready();
-    const result = await pool.query("SELECT COUNT(*)::int AS count FROM users");
+    const result = await getPool().query("SELECT COUNT(*)::int AS count FROM users");
     return Number(result.rows[0].count);
   },
   async createUser(input: { name: string; passwordHash: string; isAdmin: boolean }) {
     await ready();
     const id = randomUUID();
-    const result = await pool.query(
+    const result = await getPool().query(
       "INSERT INTO users (id, name, password_hash, is_admin) VALUES ($1, $2, $3, $4) RETURNING id, name, is_admin, created_at",
       [id, input.name, input.passwordHash, input.isAdmin]
     );
@@ -174,33 +179,33 @@ export const database = {
   },
   async findUserByName(name: string) {
     await ready();
-    const result = await pool.query("SELECT * FROM users WHERE name = $1", [name]);
+    const result = await getPool().query("SELECT * FROM users WHERE name = $1", [name]);
     return result.rows[0] ? userRow(result.rows[0]) : null;
   },
   async findPublicUser(id: string) {
     await ready();
-    const result = await pool.query("SELECT id, name, is_admin, created_at FROM users WHERE id = $1", [id]);
+    const result = await getPool().query("SELECT id, name, is_admin, created_at FROM users WHERE id = $1", [id]);
     return result.rows[0] ? publicUserRow(result.rows[0]) : null;
   },
   async users() {
     await ready();
-    const result = await pool.query("SELECT id, name, is_admin, created_at FROM users ORDER BY created_at ASC");
+    const result = await getPool().query("SELECT id, name, is_admin, created_at FROM users ORDER BY created_at ASC");
     return result.rows.map(publicUserRow);
   },
   async matches() {
     await ready();
-    const result = await pool.query("SELECT * FROM matches ORDER BY kickoff ASC, number ASC NULLS LAST");
+    const result = await getPool().query("SELECT * FROM matches ORDER BY kickoff ASC, number ASC NULLS LAST");
     return result.rows.map(matchRow);
   },
   async findMatch(id: string) {
     await ready();
-    const result = await pool.query("SELECT * FROM matches WHERE id = $1", [id]);
+    const result = await getPool().query("SELECT * FROM matches WHERE id = $1", [id]);
     return result.rows[0] ? matchRow(result.rows[0]) : null;
   },
   async upsertMatch(input: Partial<Match> & Pick<Match, "stage" | "homeTeam" | "awayTeam" | "kickoff">) {
     await ready();
     const id = input.id ?? randomUUID();
-    const result = await pool.query(
+    const result = await getPool().query(
       `
       INSERT INTO matches (id, number, stage, group_name, home_team, away_team, kickoff, venue, status, home_score, away_score)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -233,12 +238,12 @@ export const database = {
   },
   async upsertMatchByNumber(input: Partial<Match> & Pick<Match, "number" | "stage" | "homeTeam" | "awayTeam" | "kickoff">) {
     await ready();
-    const result = await pool.query("SELECT id FROM matches WHERE number = $1", [input.number]);
+    const result = await getPool().query("SELECT id FROM matches WHERE number = $1", [input.number]);
     return this.upsertMatch({ ...input, id: result.rows[0]?.id });
   },
   async setResult(input: { matchId: string; status: MatchStatus; homeScore: number | null; awayScore: number | null }) {
     await ready();
-    const result = await pool.query(
+    const result = await getPool().query(
       "UPDATE matches SET status = $1, home_score = $2, away_score = $3, updated_at = $4 WHERE id = $5 RETURNING *",
       [input.status, input.homeScore, input.awayScore, now(), input.matchId]
     );
@@ -246,12 +251,12 @@ export const database = {
   },
   async bets() {
     await ready();
-    const result = await pool.query("SELECT * FROM bets");
+    const result = await getPool().query("SELECT * FROM bets");
     return result.rows.map(betRow);
   },
   async upsertBet(input: { userId: string; matchId: string; homeScore: number; awayScore: number }) {
     await ready();
-    const result = await pool.query(
+    const result = await getPool().query(
       `
       INSERT INTO bets (id, user_id, match_id, home_score, away_score)
       VALUES ($1, $2, $3, $4, $5)
@@ -267,18 +272,18 @@ export const database = {
   },
   async questions() {
     await ready();
-    const result = await pool.query("SELECT * FROM bonus_questions ORDER BY closes_at ASC");
+    const result = await getPool().query("SELECT * FROM bonus_questions ORDER BY closes_at ASC");
     return result.rows.map(questionRow);
   },
   async findQuestion(id: string) {
     await ready();
-    const result = await pool.query("SELECT * FROM bonus_questions WHERE id = $1", [id]);
+    const result = await getPool().query("SELECT * FROM bonus_questions WHERE id = $1", [id]);
     return result.rows[0] ? questionRow(result.rows[0]) : null;
   },
   async upsertQuestion(input: { id?: string; title: string; closesAt: string; points: number; answer: string | null }) {
     await ready();
     const id = input.id ?? randomUUID();
-    const result = await pool.query(
+    const result = await getPool().query(
       `
       INSERT INTO bonus_questions (id, title, closes_at, points, answer)
       VALUES ($1, $2, $3, $4, $5)
@@ -295,12 +300,12 @@ export const database = {
   },
   async bonusPicks() {
     await ready();
-    const result = await pool.query("SELECT * FROM bonus_picks");
+    const result = await getPool().query("SELECT * FROM bonus_picks");
     return result.rows.map(pickRow);
   },
   async upsertBonusPick(input: { userId: string; questionId: string; answer: string }) {
     await ready();
-    const result = await pool.query(
+    const result = await getPool().query(
       `
       INSERT INTO bonus_picks (id, user_id, question_id, answer)
       VALUES ($1, $2, $3, $4)
